@@ -1,0 +1,23 @@
+import pool from "../config/db.js";
+
+const UserModel = {
+
+    async findByEmail(email) {
+        const query = `SELECT * FROM users where email=$1`;
+        const { rows } = await pool.query(query, [email]);
+        return rows[0];
+    },
+
+    async createUser({ name, email, passwordHash }) {
+        const query = `
+                    INSERT INTO users(name, email , password_hash)
+                    VALUES ($1,$2,$3)
+                    RETURNING id, name, email, role, is_email_verified, created_at
+                    `;
+        const values = [name, email, passwordHash];
+        const { rows } = await pool.query(query, values);
+        return rows[0];
+    }
+}
+
+export default UserModel
