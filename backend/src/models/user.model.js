@@ -17,6 +17,15 @@ const UserModel = {
         const values = [name, email, passwordHash];
         const { rows } = await pool.query(query, values);
         return rows[0];
+    },
+
+    async verifyEmail(userId) {
+        const query = `
+            UPDATE users
+            SET is_email_verified = true, updated_at = NOW()
+            WHERE id=$1
+        `;
+        await pool.query(query, [userId]);
     }
 }
 
