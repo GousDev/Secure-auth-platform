@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import UserModel from "../models/user.model.js";
 import { generateSecureToken } from "../utils/token.util.js";
 import EmailVerificationModel from "../models/emailverification.model.js";
@@ -16,6 +17,14 @@ class authController {
                     success: false,
                     message: "All fields are required"
                 })
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid email format"
+                });
             }
 
             const existingUser = await UserModel.findByEmail(email);
@@ -95,12 +104,100 @@ class authController {
             });
 
         } catch (error) {
+            console.error(error);
             return res.status(500).json({
                 success: false,
                 message: "Email verification failed"
             })
         }
+    }
 
+
+    // ################################################
+
+    static login = async (req, res) => {
+        try {
+
+            const { email, password } = req.body;
+
+            if (!email || !password) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Email and password are required"
+                })
+            }
+
+            const user = await UserModel.findByEmail(email);
+
+            if (!user) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Invalid credentials"
+                })
+            }
+
+            if (!user.is_active) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Account is disabled"
+                })
+            }
+
+            if (!user.is_email_verified) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Please verify your email before logging in"
+                })
+            }
+
+            if (user.locked_until && new Date(user.locked_until) > new Date()) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Account temporarily locked due to failed attempts"
+                })
+            }
+
+
+            const isPasswordValid = await bcrypt.compare(
+                password,
+                user.password_hash
+            );
+
+            if (!isPasswordValid) {
+                await UserModel.incrementFailedAttempts(user.id);
+
+                if (user.failed_login_attempts + 1 >= 5) {
+                    await UserModel.lockAccount(user.id);
+                }
+
+                return res.status(401).json({
+                    success: false,
+                    message: "Invalid credentials"
+                });
+            }
+
+            await UserModel.resetFailedAttempts(user.id);
+
+            const token = jwt.sign(
+                { userId: user.id, email: user.email, role: user.role },
+                process.env.JWT_ACCESS_SECRET,
+                { expiresIn: "1h" }
+            )
+
+            return res.status(200).json({
+                success: true,
+                message: "Login successful",
+                token
+            });
+
+
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({
+                success: false,
+                message: "Email verification failed"
+            })
+        }
     }
 
 }

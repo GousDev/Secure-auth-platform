@@ -26,6 +26,33 @@ const UserModel = {
             WHERE id=$1
         `;
         await pool.query(query, [userId]);
+    },
+
+    async incrementFailedAttempts(userId) {
+        const query = `
+            UPDATE users 
+            SET failed_login_attempts = failed_login_attempts + 1
+            WHERE id = $1    
+        `;
+        await pool.query(query, [userId]);
+    },
+
+    async resetFailedAttempts(userId) {
+        const query = `
+            UPDATE users 
+            SET failed_login_attempts = 0, locked_until = NULL
+            WHERE id = $1
+        `;
+        await pool.query(query, [userId]);
+    },
+
+    async lockAccount(userId) {
+        const query = `
+            UPDATE users
+            SET locked_until = NOW() + INTERVAL '15 minutes'
+            WHERE id = $1
+        `;
+        await pool.query(query, [userId]);
     }
 }
 
