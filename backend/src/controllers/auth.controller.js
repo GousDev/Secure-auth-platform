@@ -1,8 +1,10 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import UserModel from "../models/user.model.js";
-import { generateSecureToken } from "../utils/token.util.js";
+import { generateAccessToken, generateRefreshToken, generateSecureToken } from "../utils/token.util.js";
 import EmailVerificationModel from "../models/emailverification.model.js";
+import RefreshTokenModel from "../models/refreshToken.model.js";
+
 
 
 class authController {
@@ -179,16 +181,24 @@ class authController {
 
             await UserModel.resetFailedAttempts(user.id);
 
-            const token = jwt.sign(
-                { userId: user.id, email: user.email, role: user.role },
-                process.env.JWT_ACCESS_SECRET,
-                { expiresIn: "1h" }
-            )
+            // const token = jwt.sign(
+            //     { userId: user.id, email: user.email, role: user.role },
+            //     process.env.JWT_ACCESS_SECRET,
+            //     { expiresIn: "1h" }
+            // )
+            const accessToken = generateAccessToken(user);
+            const refreshToken = generateRefreshToken();
+
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 7);
+
+            await RefreshTokenModel.create(user.id, refreshToken, expiresAt);
 
             return res.status(200).json({
                 success: true,
                 message: "Login successful",
-                token
+                accessToken,
+                refreshToken
             });
 
 
@@ -196,7 +206,7 @@ class authController {
             console.error(error);
             return res.status(500).json({
                 success: false,
-                message: "Email verification failed"
+                message: "Login failed"
             })
         }
     }
@@ -236,9 +246,54 @@ class authController {
                 success: false,
                 message: "Failed to fetched profile"
             })
-
         }
     }
+
+    // ################################################
+
+    static refresh = async (req, res) => {
+        try {
+            const { refreshToken } = req.body;
+
+            if (!refreshToken)
+                return res.status(400).json({
+                    message: "Refresh token required"
+                });
+
+            const storedToken = await RefreshTokenModel.findValid(refreshToken);
+
+            if (!storedToken) {
+                return res.status(401).json({
+                    message: "Invalid refresh token"
+                });
+            }
+
+            const user = await UserModel.findById(storedToken.user_id);
+
+            await RefreshTokenModel.revoke(refreshToken);
+
+            const newAccessToken = generateAccessToken(user);
+            const newRefreshToken = generateRefreshToken();
+
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 7);
+
+            await RefreshTokenModel.create(user.id, newRefreshToken, expiresAt);
+
+            res.json({
+                success: true,
+                accessToken: newAccessToken,
+                refreshToken: newRefreshToken
+            });
+
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({
+                message: "Token refresh failed"
+            });
+        }
+    };
+
 
 }
 export default authController 
