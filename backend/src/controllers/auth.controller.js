@@ -4,6 +4,7 @@ import UserModel from "../models/user.model.js";
 import { generateSecureToken } from "../utils/token.util.js";
 import EmailVerificationModel from "../models/emailverification.model.js";
 
+
 class authController {
 
     // ################################################
@@ -197,6 +198,45 @@ class authController {
                 success: false,
                 message: "Email verification failed"
             })
+        }
+    }
+
+
+    // ################################################
+
+    static getProfile = async (req, res) => {
+        try {
+
+            const userId = req.user.userId;
+
+            console.log(userId);
+
+            const user = await UserModel.findById(userId);
+
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User not found"
+                })
+            }
+
+            return res.status(200).json({
+                success: true,
+                data: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    is_email_verified: user.is_email_verified,
+                    created_at: user.created_at
+                }
+            })
+
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Failed to fetched profile"
+            })
+
         }
     }
 

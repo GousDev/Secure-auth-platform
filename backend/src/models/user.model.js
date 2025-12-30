@@ -8,6 +8,12 @@ const UserModel = {
         return rows[0];
     },
 
+    async findById(Id) {
+        const query = `SELECT * FROM users where id=$1`;
+        const { rows } = await pool.query(query, [Id]);
+        return rows[0];
+    },
+
     async createUser({ name, email, passwordHash }) {
         const query = `
                     INSERT INTO users(name, email , password_hash)
