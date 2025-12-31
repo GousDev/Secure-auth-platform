@@ -295,5 +295,57 @@ class authController {
     };
 
 
+    // ################################################
+
+    static logout = async (req, res) => {
+        try {
+            const { refreshToken } = req.body;
+
+            if (!refreshToken) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Refresh token required"
+                });
+            }
+
+            await RefreshTokenModel.revokeByToken(refreshToken);
+
+            return res.status(200).json({
+                success: true,
+                message: "Logged out successfully"
+            });
+
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({
+                success: false,
+                message: "Logout failed"
+            });
+        }
+    };
+
+    //   ################################################
+    static logoutAll = async (req, res) => {
+        try {
+            const userId = req.user.userId;
+
+            await RefreshTokenModel.revokeAllByUser(userId);
+
+            return res.status(200).json({
+                success: true,
+                message: "Logged out from all devices"
+            });
+
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({
+                success: false,
+                message: "Logout failed"
+            });
+        }
+    };
+
+
+
 }
 export default authController 
