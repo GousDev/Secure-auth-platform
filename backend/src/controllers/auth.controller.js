@@ -1,9 +1,13 @@
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import UserModel from "../models/user.model.js";
-import { generateAccessToken, generateRefreshToken, generateSecureToken } from "../utils/token.util.js";
+import { generateAccessToken, generateRefreshToken, generateSecureToken } from "../utils/token.js";
 import EmailVerificationModel from "../models/emailverification.model.js";
 import RefreshTokenModel from "../models/refreshToken.model.js";
+import { hashPassword } from "../utils/password.js";
+import PasswordResetModel from "../models/passwordReset.model.js";
+import { sendResetEmail } from "../utils/mailer.js";
 
 
 
@@ -38,7 +42,7 @@ class authController {
                 })
             }
 
-            const passwordHash = await bcrypt.hash(password, 10);
+            const passwordHash = await hashPassword(password);
 
             const user = await UserModel.createUser({
                 name,
@@ -62,7 +66,6 @@ class authController {
                 // data: user
             })
 
-
         } catch (error) {
             console.error(error);
             return res.status(500).json({
@@ -84,7 +87,6 @@ class authController {
                     message: "Verification token missing"
                 });
             }
-
 
             const record = await EmailVerificationModel.findByToken(token);
 
@@ -159,7 +161,6 @@ class authController {
                     message: "Account temporarily locked due to failed attempts"
                 })
             }
-
 
             const isPasswordValid = await bcrypt.compare(
                 password,
@@ -345,7 +346,72 @@ class authController {
         }
     };
 
+    // ################################################
 
+    static forgotPassword = async (req, res) => {
+        try {
+            const { email } = req.body;
+
+            const user = await UserModel.findByEmail(email);
+            if (!user) {
+                return res.status(200).json({
+                    success: true,
+                    message: "If the email exists, a reset link was sent"
+                });
+            }
+
+            const token = crypto.randomBytes(32).toString("hex");
+
+            await PasswordResetModel.create(user.id, token);
+            await sendResetEmail(user.email, token);
+
+            res.json({
+                success: true,
+                message: "Password reset link sent"
+            });
+
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({
+                success: false, message: "Server error"
+            });
+        }
+    };
+
+    // ################################################
+    static resetPassword = async (req, res) => {
+        try {
+            const { token, newPassword } = req.body;
+
+            const resetToken = await PasswordResetModel.findValidToken(token);
+            if (!resetToken) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid or expired token"
+                });
+            }
+
+            const hashed = await hashPassword(newPassword);
+
+            await UserModel.updatePassword(resetToken.user_id, hashed);
+
+            await PasswordResetModel.markUsed(token);
+
+            await RefreshTokenModel.revokeAllByUser(resetToken.user_id);
+
+            res.json({
+                success: true,
+                message: "Password reset successful. Please login again."
+            });
+
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({
+                success: false,
+                message: "Server error"
+            });
+        }
+    };
 
 }
 export default authController 

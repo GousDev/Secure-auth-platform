@@ -22,16 +22,20 @@ const RefreshTokenModel = {
     },
 
     async revokeByToken(token) {
-        const query =
-            `UPDATE refresh_tokens
-            SET revoked = true WHERE token = $1`;
+        const query = `
+            UPDATE refresh_tokens
+            SET revoked = true
+            WHERE token = $1
+            `;
         await pool.query(query, [token]);
     },
 
     async revokeAllByUser(userId) {
         const query = `
             UPDATE refresh_tokens
-            SET revoked = true WHERE user_id = $1`;
+            SET revoked = true
+            WHERE user_id = $1
+            `;
         await pool.query(query, [userId]);
 
     }
