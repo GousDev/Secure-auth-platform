@@ -413,5 +413,58 @@ class authController {
         }
     };
 
+    static changePassword = async (req, res) => {
+        try {
+            const userId = req.user.userId;
+            const { currentPassword, newPassword } = req.body;
+
+            if (!currentPassword || !newPassword) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Current and new password are required"
+                });
+            }
+
+            const user = await UserModel.findById(userId);
+
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User not found"
+                });
+            }
+
+            const isMatch = await bcrypt.compare(
+                currentPassword,
+                user.password_hash
+            );
+
+            if (!isMatch) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Current password is incorrect"
+                });
+            }
+
+            const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+            await UserModel.updatePassword(userId, newPasswordHash);
+
+            await RefreshTokenModel.revokeAllByUser(userId);
+
+            return res.status(200).json({
+                success: true,
+                message: "Password changed successfully. Please login again."
+            });
+
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({
+                success: false,
+                message: "Failed to change password"
+            });
+        }
+    }
+
 }
 export default authController 

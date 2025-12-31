@@ -61,13 +61,13 @@ const UserModel = {
         await pool.query(query, [userId]);
     },
 
-    async updatePassword(userId, hashedPassword) {
+    async updatePassword(userId, passwordHash) {
         const query = `
             UPDATE users
-            SET password = $1 
+            SET password_hash = $1 
             WHERE id = $2
         `;
-        await pool.query(query, [hashedPassword, userId]);
+        await pool.query(query, [passwordHash, userId]);
     }
 }
 
