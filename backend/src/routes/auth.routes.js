@@ -1,17 +1,18 @@
 import express from "express";
 import authController from "../controllers/auth.controller.js";
 import authMiddleware from "../middlewares/auth.middleware.js";
+import { authRateLimiter } from "../middlewares/rateLimit.middleware.js";
 
 const router = express.Router();
 
 router.get('/verify-email', authController.verifyEmail);
-router.post('/register', authController.register);
-router.post('/login', authController.login);
+router.post('/register', authRateLimiter, authController.register);
+router.post('/login', authRateLimiter, authController.login);
 router.get('/profile', authMiddleware, authController.getProfile);
 router.post('/refresh-token', authController.refresh);
 router.post('/logout', authController.logout);
 router.post('/logout-all', authMiddleware, authController.logoutAll);
-router.post('/forgot-password', authController.forgotPassword);
+router.post('/forgot-password', authRateLimiter, authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
 router.post('/change-password', authMiddleware, authController.changePassword);
 
