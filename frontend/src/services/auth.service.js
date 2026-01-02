@@ -1,0 +1,8 @@
+import { data } from "react-router-dom";
+import api from "../api/axios";
+
+export const authService = {
+    register: (data) => api.post('/auth/register', data),
+    login: (data) => api.post('auth/login', data),
+    logout: () => api.post('auth/logout')
+}
