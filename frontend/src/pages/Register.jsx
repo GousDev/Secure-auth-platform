@@ -1,11 +1,13 @@
 import { useState } from "react";
 import AuthLayout from "../components/AuthLayout";
-import { useAuth } from "../hooks/useAuth";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const Register = () => {
 
-    const { register, loading, error } = useAuth();
-
+    const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
     const [form, setForm] = useState({
         name: "",
         email: "",
@@ -14,7 +16,24 @@ const Register = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        await register(form);
+        setLoading(true);
+        setError(null);
+        console.log(form);
+        try {
+            const res = await axios.post("http://localhost:4000/api/auth/register", form);
+
+            if (res.data.success) {
+
+                alert("Registered successfully. Check email for verification.");
+                navigate('/verify-email')
+            }
+
+        } catch (err) {
+            setError(err.response?.data?.message || "Registration failed");
+            throw err;
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -129,7 +148,7 @@ const Register = () => {
 
                 <p className="text-center mt-4 text-white/80">
                     Already have an account?{" "}
-                    <a href="#" className="text-indigo-300 underline hover:text-indigo-400">
+                    <a href="/login" className="text-indigo-300 underline hover:text-indigo-400">
                         Login
                     </a>
                 </p>

@@ -1,12 +1,10 @@
 import { useState } from "react";
 import AuthLayout from "../components/AuthLayout";
-import { useAuth } from "../hooks/useAuth";
-
 
 export default function Login() {
 
-    const { login, loading, error } = useAuth();
-
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
     const [form, setForm] = useState({
         email: "",
         password: ""
@@ -14,7 +12,7 @@ export default function Login() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        await login(form);
+        // await login(form);
     };
 
 
@@ -109,7 +107,7 @@ export default function Login() {
                 <p className="text-center mt-4 text-white/80">
                     Don’t have an account?{" "}
                     <a
-                        href="#"
+                        href="/register"
                         className="text-indigo-300 underline hover:text-indigo-400"
                     >
                         Create one

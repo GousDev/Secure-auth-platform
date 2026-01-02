@@ -29,11 +29,11 @@ const VerifyEmail = () => {
                 {/* Info box */}
                 <div className="bg-white/10 border border-white/20 rounded-lg p-4 text-sm text-white/80 mb-6">
                     Didn’t receive the email?
-                    Check your spam folder or resend it.
+                    Check your spam folder.
                 </div>
 
                 {/* Buttons */}
-                <div className="flex flex-col gap-3">
+                {/* <div className="flex flex-col gap-3">
                     <button
                         className="w-full bg-indigo-500 hover:bg-indigo-600 transition py-2.5 rounded-full font-medium shadow-lg hover:scale-[1.02] active:scale-95"
                     >
@@ -45,7 +45,7 @@ const VerifyEmail = () => {
                     >
                         Change Email
                     </button>
-                </div>
+                </div> */}
 
                 {/* Footer */}
                 <p className="text-xs text-white/60 mt-6">
