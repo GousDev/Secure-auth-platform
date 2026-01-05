@@ -3,11 +3,14 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import UserModel from "../models/user.model.js";
 import { generateAccessToken, generateRefreshToken, generateSecureToken } from "../utils/token.js";
-import EmailVerificationModel from "../models/emailverification.model.js";
+import EmailVerificationOtpModel from "../models/emailVerificationOtp.model.js";
 import RefreshTokenModel from "../models/refreshToken.model.js";
 import { hashPassword } from "../utils/password.js";
-import PasswordResetModel from "../models/passwordReset.model.js";
-import { sendResetEmail } from "../utils/mailer.js";
+import PasswordResetModel from "../models/passwordResetOtp.model.js";
+import { sendEmail } from "../utils/mailer.js";
+import { generateOtp } from "../utils/otp.js";
+import PasswordResetOtpModel from "../models/passwordResetOtp.model.js";
+import { use } from "react";
 
 
 
@@ -51,18 +54,19 @@ class authController {
             })
 
             // Generate  Verification Token
-            const verificationToken = generateSecureToken();
+            const otp = generateOtp();
 
-            await EmailVerificationModel.create(user.id, verificationToken);
+            await EmailVerificationOtpModel.create({
+                userId: user.id,
+                otp,
+                expiresAt: new Date(Date.now() + 5 * 60 * 1000)
+            });
 
-            console.log(`
-                Verify your email:
-                http://localhost:4000/api/auth/verify-email?token=${encodeURIComponent(verificationToken)}
-            `);
+            // await sendEmailVerificationOtp(email, otp);
 
             return res.status(201).json({
                 success: true,
-                message: "User registered. Please verify your email",
+                message: "Otp sent to email. Please verify your email",
                 // data: user
             })
 
@@ -76,37 +80,44 @@ class authController {
     }
 
     // ################################################
-    static verifyEmail = async (req, res) => {
+    static verifyEmailOtp = async (req, res) => {
         try {
 
-            const token = req.query.token;
+            const { email, otp } = req.body;
 
-            if (!token) {
+            if (!email || !otp) {
                 return res.status(400).json({
                     success: false,
-                    message: "Verification token missing"
+                    message: "Email and OTP are required"
                 });
             }
 
-            const record = await EmailVerificationModel.findByToken(token);
+            // 1️⃣ Find the user
+            const user = await UserModel.findByEmail(email);
+            if (!user) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid email or OTP"
+                });
+            }
 
-            console.log("Verification DB result:", record);
+            const record = await EmailVerificationOtpModel.findValidOtp(user.id, otp);
 
             if (!record) {
                 return res.status(400).json({
                     success: false,
-                    message: "Invalid or expired verification token"
+                    message: "Invalid or expired OTP"
                 });
             }
 
-            await UserModel.verifyEmail(record.user_id);
+            await UserModel.verifyEmail(user.id);
 
-            await EmailVerificationModel.deleteByToken(token);
+            await EmailVerificationOtpModel.deleteByUser(user.id);
 
-            return res.status(201).json({
+            return res.status(200).json({
                 success: true,
                 message: "Email verified successfully."
-            });
+            })
 
         } catch (error) {
             console.error(error);
@@ -182,11 +193,6 @@ class authController {
 
             await UserModel.resetFailedAttempts(user.id);
 
-            // const token = jwt.sign(
-            //     { userId: user.id, email: user.email, role: user.role },
-            //     process.env.JWT_ACCESS_SECRET,
-            //     { expiresIn: "1h" }
-            // )
             const accessToken = generateAccessToken(user);
             const refreshToken = generateRefreshToken();
 
@@ -195,11 +201,24 @@ class authController {
 
             await RefreshTokenModel.create(user.id, refreshToken, expiresAt);
 
+            // Send refresh token as HttpOnly cookie
+            res.cookie("refreshToken", refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                samesite: "Strict",
+                maxAge: 7 * 24 * 60 * 60 * 1000,
+            })
+
             return res.status(200).json({
                 success: true,
                 message: "Login successful",
                 accessToken,
-                refreshToken
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role
+                }
             });
 
 
@@ -287,9 +306,10 @@ class authController {
                 refreshToken: newRefreshToken
             });
 
-        } catch (err) {
-            console.error(err);
+        } catch (error) {
+            console.error(error);
             res.status(500).json({
+                success: false,
                 message: "Token refresh failed"
             });
         }
@@ -354,24 +374,29 @@ class authController {
 
             const user = await UserModel.findByEmail(email);
             if (!user) {
-                return res.status(200).json({
-                    success: true,
-                    message: "If the email exists, a reset link was sent"
+                return res.json({
+                    message: "If the email exists, an OTP has been sent"
                 });
             }
 
-            const token = crypto.randomBytes(32).toString("hex");
+            const otp = generateOtp();
 
-            await PasswordResetModel.create(user.id, token);
-            await sendResetEmail(user.email, token);
+            await PasswordResetOtpModel.create(user.id, otp);
+
+            await sendEmail({
+                to: user.email,
+                subject: "Reset Password OTP",
+                html: `<p>Your password reset otp is <b> ${otp}</b></p>.
+                <p>This OTP is valid for 5 minutes.</p>`
+            })
 
             res.json({
                 success: true,
-                message: "Password reset link sent"
+                message: "If the email exists, OTP has been sent"
             });
 
-        } catch (err) {
-            console.error(err);
+        } catch (error) {
+            console.error(error);
             res.status(500).json({
                 success: false, message: "Server error"
             });
@@ -379,33 +404,73 @@ class authController {
     };
 
     // ################################################
-    static resetPassword = async (req, res) => {
-        try {
-            const { token, newPassword } = req.body;
 
-            const resetToken = await PasswordResetModel.findValidToken(token);
-            if (!resetToken) {
+    static verifyForgotOtp = async (req, res) => {
+        try {
+            const { email, otp } = req.body;
+
+            const user = await UserModel.findByEmail(email);
+            if (!user) {
                 return res.status(400).json({
-                    success: false,
-                    message: "Invalid or expired token"
-                });
+                    message: "Invalid OTP"
+                })
             }
 
-            const hashed = await hashPassword(newPassword);
+            const validOtp = await PasswordResetOtpModel.findValidOtp(user.id, otp);
+            if (!validOtp) {
+                return res.status(400).json({
+                    message: "Invalid or expired OTP"
+                })
+            }
 
-            await UserModel.updatePassword(resetToken.user_id, hashed);
+            await PasswordResetOtpModel.markUsed(validOtp.id);
 
-            await PasswordResetModel.markUsed(token);
+            await UserModel.setPasswordResetVerified(user.id, true);
 
-            await RefreshTokenModel.revokeAllByUser(resetToken.user_id);
+            await PasswordResetOtpModel.invalidateAll(user.id);
+
+            return res.json({
+                success: true,
+                message: "OTP verified successfully"
+            })
+
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({
+                success: false,
+                message: "Server error"
+            });
+        }
+    }
+
+    // ################################################
+    static resetPassword = async (req, res) => {
+        try {
+            const { email, newPassword } = req.body;
+
+            const user = await UserModel.findByEmail(email);
+            if (!user || !user.password_reset_verified) {
+                return res.status(400).json({
+                    message: "OTP verification required"
+                })
+            }
+
+            const hashedPassword = await hashPassword(newPassword);
+
+            await UserModel.updatePassword(user.id, hashedPassword);
+
+            await UserModel.setPasswordResetVerified(user.id, false);
+
+            await RefreshTokenModel.revokeAllByUser(user.id);
+
 
             res.json({
                 success: true,
-                message: "Password reset successful. Please login again."
+                message: "Password reset successfully"
             });
 
-        } catch (err) {
-            console.error(err);
+        } catch (error) {
+            console.error(error);
             res.status(500).json({
                 success: false,
                 message: "Server error"
@@ -413,58 +478,6 @@ class authController {
         }
     };
 
-    static changePassword = async (req, res) => {
-        try {
-            const userId = req.user.userId;
-            const { currentPassword, newPassword } = req.body;
-
-            if (!currentPassword || !newPassword) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Current and new password are required"
-                });
-            }
-
-            const user = await UserModel.findById(userId);
-
-            if (!user) {
-                return res.status(404).json({
-                    success: false,
-                    message: "User not found"
-                });
-            }
-
-            const isMatch = await bcrypt.compare(
-                currentPassword,
-                user.password_hash
-            );
-
-            if (!isMatch) {
-                return res.status(401).json({
-                    success: false,
-                    message: "Current password is incorrect"
-                });
-            }
-
-            const newPasswordHash = await bcrypt.hash(newPassword, 10);
-
-            await UserModel.updatePassword(userId, newPasswordHash);
-
-            await RefreshTokenModel.revokeAllByUser(userId);
-
-            return res.status(200).json({
-                success: true,
-                message: "Password changed successfully. Please login again."
-            });
-
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({
-                success: false,
-                message: "Failed to change password"
-            });
-        }
-    }
 
 }
 export default authController 

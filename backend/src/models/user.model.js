@@ -68,7 +68,19 @@ const UserModel = {
             WHERE id = $2
         `;
         await pool.query(query, [passwordHash, userId]);
-    }
+    },
+
+
+    async setPasswordResetVerified(userId, value) {
+        const query = `
+        UPDATE users
+        SET password_reset_verified = $2,
+            updated_at = NOW()
+        WHERE id = $1
+    `;
+        await pool.query(query, [userId, value]);
+    },
+
 }
 
 export default UserModel

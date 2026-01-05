@@ -1,24 +1,57 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AuthLayout from "../components/AuthLayout";
+import { useSearchParams } from "react-router-dom";
+
 
 export default function Login() {
 
+    const { searchParams } = useSearchParams();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [form, setForm] = useState({
+    const [formData, setFormData] = useState({
         email: "",
         password: ""
     });
+    const [message, setMessage] = useState("");
+
+    useEffect(() => {
+        if (searchParams?.get("verified") === "true") {
+            setMessage("Email verified successfully")
+        }
+
+        if (searchParams?.get("verified") === "false") {
+            setMessage("Email verification failed")
+        }
+    })
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        // await login(form);
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await axios.post("http://localhost:4000/api/auth/login", formData);
+            console.log(res);
+
+            if (res.data.success) {
+                alert("Login Successful")
+                localStorage.setItem("accessToken", res.data.accessTo);
+            }
+
+        } catch (error) {
+            setError(error.response?.data?.message || "Login failed");
+
+        } finally {
+            setLoading(false);
+        }
     };
 
 
     return (
         <AuthLayout>
             {/* <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-indigo-900 via-black to-indigo-800"> */}
+
+            {message && <h1>{message}</h1>}
+
             <form className=" bg-white/20 backdrop-blur-xl border border-white/30 text-white max-w-[380px] w-full mx-4 p-6 rounded-2xl shadow-2xl"
                 onSubmit={handleSubmit}>
                 <h2 className="text-2xl font-semibold mb-6 text-center">
@@ -45,9 +78,9 @@ export default function Login() {
                         required
                         type="email"
                         name="email"
-                        value={form.email}
+                        value={formData.email}
                         onChange={(e) =>
-                            setForm({ ...form, email: e.target.value })
+                            setFormData({ ...formData, email: e.target.value })
                         }
                     />
                 </div>
@@ -68,9 +101,9 @@ export default function Login() {
                         required
                         type="password"
                         name="password"
-                        value={form.password}
+                        value={formData.password}
                         onChange={(e) =>
-                            setForm({ ...form, password: e.target.value })
+                            setFormData({ ...formData, password: e.target.value })
                         }
                     />
                 </div>

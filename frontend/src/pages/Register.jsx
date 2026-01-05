@@ -28,9 +28,9 @@ const Register = () => {
                 navigate('/verify-email')
             }
 
-        } catch (err) {
-            setError(err.response?.data?.message || "Registration failed");
-            throw err;
+        } catch (error) {
+            setError(error.response?.data?.message || "Registration failed");
+            throw error;
         } finally {
             setLoading(false);
         }
