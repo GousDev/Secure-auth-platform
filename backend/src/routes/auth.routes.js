@@ -5,7 +5,7 @@ import { authRateLimiter } from "../middlewares/rateLimit.middleware.js";
 
 const router = express.Router();
 
-router.get('/verify-email-otp', authRateLimiter, authController.verifyEmailOtp);
+router.get('/verify-email-otp', authController.verifyEmailOtp);
 router.post('/register', authRateLimiter, authController.register);
 router.post('/login', authRateLimiter, authController.login);
 router.get('/profile', authMiddleware, authController.getProfile);
@@ -15,6 +15,6 @@ router.post('/logout-all', authMiddleware, authController.logoutAll);
 router.post('/forgot-password', authRateLimiter, authController.forgotPassword);
 router.post('/verify-forgot-password-otp', authController.verifyForgotOtp);
 router.post('/reset-password', authController.resetPassword);
-router.post('/change-password', authMiddleware, authController.changePassword);
+
 
 export default router

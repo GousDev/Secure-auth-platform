@@ -204,8 +204,8 @@ class authController {
             // Send refresh token as HttpOnly cookie
             res.cookie("refreshToken", refreshToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
-                samesite: "Strict",
+                secure: false,
+                sameSite: "lax",
                 maxAge: 7 * 24 * 60 * 60 * 1000,
             })
 
@@ -239,8 +239,6 @@ class authController {
 
             const userId = req.user.userId;
 
-            console.log(userId);
-
             const user = await UserModel.findById(userId);
 
             if (!user) {
@@ -256,12 +254,14 @@ class authController {
                     id: user.id,
                     name: user.name,
                     email: user.email,
+                    role: user.role,
                     is_email_verified: user.is_email_verified,
                     created_at: user.created_at
                 }
             })
 
         } catch (error) {
+            console.error("Get profile error:", error);
             return res.status(500).json({
                 success: false,
                 message: "Failed to fetched profile"
@@ -273,7 +273,8 @@ class authController {
 
     static refresh = async (req, res) => {
         try {
-            const { refreshToken } = req.body;
+            const refreshToken = req.cookies?.refreshToken;
+
 
             if (!refreshToken)
                 return res.status(400).json({
@@ -300,10 +301,16 @@ class authController {
 
             await RefreshTokenModel.create(user.id, newRefreshToken, expiresAt);
 
+            res.cookie("refreshToken", newRefreshToken, {
+                httpOnly: true,
+                secure: false,
+                sameSite: "lax",
+                maxAge: 7 * 24 * 60 * 60 * 1000,
+            });
+
             res.json({
                 success: true,
                 accessToken: newAccessToken,
-                refreshToken: newRefreshToken
             });
 
         } catch (error) {
@@ -320,16 +327,18 @@ class authController {
 
     static logout = async (req, res) => {
         try {
-            const { refreshToken } = req.body;
+            const refreshToken = req.cookies?.refreshToken;
+            if (refreshToken) {
 
-            if (!refreshToken) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Refresh token required"
-                });
             }
 
             await RefreshTokenModel.revokeByToken(refreshToken);
+
+            res.clearCookie("refreshToken", {
+                httpOnly: true,
+                secure: false,
+                sameSite: "lax",
+            });
 
             return res.status(200).json({
                 success: true,
@@ -351,6 +360,12 @@ class authController {
             const userId = req.user.userId;
 
             await RefreshTokenModel.revokeAllByUser(userId);
+
+            res.clearCookie("refreshToken", {
+                httpOnly: true,
+                secure: false,
+                sameSite: "lax"
+            });
 
             return res.status(200).json({
                 success: true,
