@@ -2,6 +2,7 @@ import { useState } from "react";
 import AuthLayout from "../components/AuthLayout";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import api from "../api/axios";
 
 const Register = () => {
 
@@ -20,17 +21,15 @@ const Register = () => {
         setError(null);
         console.log(form);
         try {
-            const res = await axios.post("http://localhost:4000/api/auth/register", form);
+            const res = await api.post("/auth/register", form);
 
             if (res.data.success) {
-
-                alert("Registered successfully. Check email for verification.");
-                navigate('/verify-email')
+                navigate('/verify-email', {
+                    state: { email: form.email }
+                })
             }
-
         } catch (error) {
             setError(error.response?.data?.message || "Registration failed");
-            throw error;
         } finally {
             setLoading(false);
         }

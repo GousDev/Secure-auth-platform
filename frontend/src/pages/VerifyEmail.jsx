@@ -1,7 +1,50 @@
-import React from "react";
+import React, { useState } from "react";
 import AuthLayout from "../components/AuthLayout";
+import { useLocation, useNavigate } from "react-router-dom";
+import api from "../api/axios";
 
 const VerifyEmail = () => {
+
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const email = location.state?.email;
+
+    const [otp, setOtp] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    // if (!email) {
+    //     navigate("/register");
+    //     return null;
+    // }
+
+    const handleVerify = async () => {
+        if (otp.length !== 6) {
+            setError("Please enter a 6-digit OTP");
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            const res = await api.post("/auth/verify-email-otp", {
+                email,
+                otp,
+            });
+
+            if (res.data.success) {
+                alert("email verified successfully")
+                navigate("/login");
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || "Invalid OTP");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <AuthLayout>
             {/* // <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-900 to-black px-4"> */}
@@ -22,34 +65,38 @@ const VerifyEmail = () => {
 
                 {/* Subtitle */}
                 <p className="text-sm text-white/70 mb-6">
-                    We’ve sent a verification link to your email address.
-                    Please verify to continue.
+                    Enter the 6-digit OTP sent to <br />
+                    <span className="text-indigo-300 font-medium">{email}</span>
                 </p>
 
-                {/* Info box */}
-                <div className="bg-white/10 border border-white/20 rounded-lg p-4 text-sm text-white/80 mb-6">
-                    Didn’t receive the email?
-                    Check your spam folder.
-                </div>
+                {/* Error */}
+                {error && (
+                    <p className="text-red-400 text-sm mb-4">{error}</p>
+                )}
 
-                {/* Buttons */}
-                {/* <div className="flex flex-col gap-3">
-                    <button
-                        className="w-full bg-indigo-500 hover:bg-indigo-600 transition py-2.5 rounded-full font-medium shadow-lg hover:scale-[1.02] active:scale-95"
-                    >
-                        Resend Verification Email
-                    </button>
+                {/* OTP Input */}
+                <input
+                    type="text"
+                    maxLength="6"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                    placeholder="Enter OTP"
+                    className="w-full text-center tracking-[0.4em] text-lg bg-white/20 text-white placeholder-white/50 border border-white/30 outline-none rounded-md py-3 px-4 focus:ring-2 focus:ring-indigo-400 mb-6"
+                />
 
-                    <button
-                        className="w-full bg-white/10 hover:bg-white/20 transition py-2.5 rounded-full text-sm"
-                    >
-                        Change Email
-                    </button>
-                </div> */}
+                {/* Verify Button */}
+                <button
+                    onClick={handleVerify}
+                    disabled={loading}
+                    className="w-full bg-indigo-500 hover:bg-indigo-600 transition py-2.5 rounded-full font-medium shadow-lg hover:scale-[1.02] active:scale-95"
+                >
+                    {loading ? "Verifying..." : "Verify Email"}
+                </button>
+
 
                 {/* Footer */}
                 <p className="text-xs text-white/60 mt-6">
-                    Need help? Contact support
+                    Didn’t receive the OTP? Check spam folder
                 </p>
             </div>
 

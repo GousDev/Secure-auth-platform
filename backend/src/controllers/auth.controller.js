@@ -10,7 +10,7 @@ import PasswordResetModel from "../models/passwordResetOtp.model.js";
 import { sendEmail } from "../utils/mailer.js";
 import { generateOtp } from "../utils/otp.js";
 import PasswordResetOtpModel from "../models/passwordResetOtp.model.js";
-import { use } from "react";
+
 
 
 
