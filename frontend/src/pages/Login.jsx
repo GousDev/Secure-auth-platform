@@ -1,44 +1,36 @@
 import { useEffect, useState } from "react";
 import AuthLayout from "../components/AuthLayout";
-import { useSearchParams } from "react-router-dom";
+import api from "../api/axios";
+import { useNavigate } from "react-router-dom";
 
 
 export default function Login() {
 
-    const { searchParams } = useSearchParams();
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [formData, setFormData] = useState({
         email: "",
         password: ""
     });
-    const [message, setMessage] = useState("");
 
-    useEffect(() => {
-        if (searchParams?.get("verified") === "true") {
-            setMessage("Email verified successfully")
-        }
-
-        if (searchParams?.get("verified") === "false") {
-            setMessage("Email verification failed")
-        }
-    })
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
         try {
-            const res = await axios.post("http://localhost:4000/api/auth/login", formData);
+            const res = await api.post("/auth/login", formData);
             console.log(res);
 
             if (res.data.success) {
                 alert("Login Successful")
                 localStorage.setItem("accessToken", res.data.accessTo);
+                navigate("/dashboard")
             }
 
         } catch (error) {
-            setError(error.response?.data?.message || "Login failed");
+            setError(error.response?.data?.message || "Invalid Email or Password");
 
         } finally {
             setLoading(false);
@@ -49,8 +41,6 @@ export default function Login() {
     return (
         <AuthLayout>
             {/* <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-indigo-900 via-black to-indigo-800"> */}
-
-            {message && <h1>{message}</h1>}
 
             <form className=" bg-white/20 backdrop-blur-xl border border-white/30 text-white max-w-[380px] w-full mx-4 p-6 rounded-2xl shadow-2xl"
                 onSubmit={handleSubmit}>
