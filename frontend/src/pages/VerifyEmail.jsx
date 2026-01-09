@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import AuthLayout from "../components/AuthLayout";
+import AuthLayout from "../layout/AuthLayout";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 
