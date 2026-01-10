@@ -2,7 +2,7 @@ import DashboardLayout from "../layout/dashboardLayout";
 
 export default function Dashboard() {
     return (
-        <DashboardLayout>
+        <>
             <h1 className="text-3xl font-semibold mb-6">
                 Dashboard
             </h1>
@@ -29,6 +29,6 @@ export default function Dashboard() {
                     </p>
                 </div>
             </div>
-        </DashboardLayout>
+        </>
     );
 }
