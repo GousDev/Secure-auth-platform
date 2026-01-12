@@ -25,7 +25,7 @@ export default function Login() {
 
             if (res.data.success) {
                 alert("Login Successful")
-                localStorage.setItem("accessToken", res.data.accessTo);
+                localStorage.setItem("accessToken", res.data.accessToken);
                 navigate("/dashboard")
             }
 

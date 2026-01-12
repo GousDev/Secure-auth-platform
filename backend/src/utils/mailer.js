@@ -10,12 +10,17 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-export const sendEmail = async (to, subject, html) => {
+export const sendEmail = async ({ to, subject, html }) => {
+    if (!to) {
+        throw new Error("Recipient email is missing");
+    }
+
     await transporter.sendMail({
         from: `Secure Auth Platform <${process.env.SMTP_USER}>`,
         to,
         subject,
         html,
-    })
+    });
 };
+
 

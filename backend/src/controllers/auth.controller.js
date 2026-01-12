@@ -53,8 +53,15 @@ class authController {
                 passwordHash
             })
 
+            console.log("EMAIL DEBUG:", {
+                userEmail: user.email,
+                bodyEmail: email
+            });
+
             // Generate  Verification Token
             const otp = generateOtp();
+
+            console.log(otp)
 
             await EmailVerificationOtpModel.create({
                 userId: user.id,
@@ -62,8 +69,12 @@ class authController {
                 expiresAt: new Date(Date.now() + 5 * 60 * 1000)
             });
 
-            // await sendEmailVerificationOtp(email, otp);
-
+            await sendEmail({
+                to: user.email,
+                subject: "Email Verification OTP",
+                html: `<p>Your verification otp is <b> ${otp}</b></p>.
+                <p>This OTP is valid for 5 minutes.</p>`
+            })
             return res.status(201).json({
                 success: true,
                 message: "Otp sent to email. Please verify your email",

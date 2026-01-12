@@ -14,10 +14,6 @@ const VerifyEmail = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // if (!email) {
-    //     navigate("/register");
-    //     return null;
-    // }
 
     const handleVerify = async () => {
         if (otp.length !== 6) {

@@ -19,14 +19,19 @@ const Register = () => {
         e.preventDefault();
         setLoading(true);
         setError(null);
-        console.log(form);
+        // console.log(form);
         try {
             const res = await api.post("/auth/register", form);
 
+            // console.log(res)
+
             if (res.data.success) {
-                navigate('/verify-email', {
-                    state: { email: form.email }
-                })
+                alert("register successfully")
+                setTimeout(() => {
+                    navigate('/verify-email', {
+                        state: { email: form.email }
+                    })
+                }, 2000);
             }
         } catch (error) {
             setError(error.response?.data?.message || "Registration failed");

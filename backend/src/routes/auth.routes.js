@@ -5,7 +5,7 @@ import { authRateLimiter } from "../middlewares/rateLimit.middleware.js";
 
 const router = express.Router();
 
-router.get('/verify-email-otp', authController.verifyEmailOtp);
+router.post('/verify-email-otp', authController.verifyEmailOtp);
 router.post('/register', authRateLimiter, authController.register);
 router.post('/login', authRateLimiter, authController.login);
 router.get('/profile', authMiddleware, authController.getProfile);
