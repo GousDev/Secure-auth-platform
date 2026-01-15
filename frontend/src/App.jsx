@@ -5,6 +5,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 import Dashboard from "./pages/Dashboard";
 import DashboardLayout from "./layout/dashboardLayout";
 import Profile from "./pages/Profile";
+import ProtectedRoute from "./routes/Protectedroute";
 
 
 export default function App() {
