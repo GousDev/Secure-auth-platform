@@ -340,10 +340,9 @@ class authController {
         try {
             const refreshToken = req.cookies?.refreshToken;
             if (refreshToken) {
-
+                await RefreshTokenModel.revokeByToken(refreshToken);
             }
 
-            await RefreshTokenModel.revokeByToken(refreshToken);
 
             res.clearCookie("refreshToken", {
                 httpOnly: true,

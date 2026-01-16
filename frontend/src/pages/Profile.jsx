@@ -6,6 +6,8 @@ export default function Profile() {
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
 
     const navigate = useNavigate();
 
@@ -27,6 +29,16 @@ export default function Profile() {
 
         fetchProfile();
     }, [navigate]);
+
+    const handleLogout = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post('/auth/logout');
+            navigate("/login")
+        } catch (error) {
+            alert("Logout failed. Try again.");
+        }
+    }
 
     if (loading) {
         return (
@@ -105,11 +117,43 @@ export default function Profile() {
                 </button>
 
                 <button
+                    onClick={() => setShowLogoutConfirm(true)}
                     className="flex-1 bg-red-500/20 hover:bg-red-500/30 transition py-2 rounded-full text-sm font-medium text-red-300"
                 >
                     Logout
                 </button>
             </div>
-        </div>
+
+            {/* Logout Modal Popup */}
+            {showLogoutConfirm && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+                    <div className="bg-slate-900 border border-white/20 rounded-2xl p-6 w-[90%] max-w-sm text-white">
+                        <h2 className="text-lg font-semibold mb-2">
+                            Confirm Logout
+                        </h2>
+                        <p className="text-white/60 text-sm mb-6">
+                            Are you sure you want to logout?
+                        </p>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowLogoutConfirm(false)}
+                                className="flex-1 py-2 rounded-full bg-white/10 hover:bg-white/20 transition"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                onClick={handleLogout}
+                                className="flex-1 py-2 rounded-full bg-red-500 hover:bg-red-600 transition"
+                            >
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+        </div >
     );
 }
